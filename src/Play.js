@@ -8,6 +8,8 @@ class Play extends Phaser.Scene {
         this.SHOT_VELOCITY_X = 200
         this.SHOT_VELOCITY_Y_MIN = 700
         this.SHOT_VELOCITY_Y_MIX = 1100
+        this.shotCount = 0;
+        this.successCount = 0;
     }
 
     preload() {
@@ -17,6 +19,7 @@ class Play extends Phaser.Scene {
         this.load.image('ball', 'ball.png')
         this.load.image('wall', 'wall.png')
         this.load.image('oneway', 'one_way_wall.png')
+        this.load.image('movingObstacle','wall.png');
     }
 
     create() {
@@ -51,24 +54,54 @@ class Play extends Phaser.Scene {
         this.oneWay.body.setImmovable(true)
         this.oneWay.body.checkCollision.down = false
 
+        
+        this.movingObstacle = this.physics.add.sprite(width / 2, height / 3, 'movingObstacle');
+        this.movingObstacle.body.setImmovable(true);
+        this.movingObstacle.setVelocityX(100);
+        this.movingObstacle.body.setCollideWorldBounds(true);
+        this.movingObstacle.body.bounce.x = 1;
+
+
+        this.shotText = this.add.text(20, 20, 'Shots: 0', { fontSize: '20px', fill: '#fff' });
+        this.scoreText = this.add.text(20, 50, 'Score: 0', { fontSize: '20px', fill: '#fff' });
+        this.successRateText = this.add.text(20, 80, 'Success Rate: 0%', { fontSize: '20px', fill: '#fff' });
         // add pointer input
         this.input.on('pointerdown',(pointer)=>{
             let shotDirection = pointer.y == this.ball.y ? 1: -1
             this.ball.body.setVelocityX(Phaser.Math.Between(-this.SHOT_VELOCITY_X, this.SHOT_VELOCITY_X))
             this.ball.body.setVelocityY(Phaser.Math.Between(this.SHOT_VELOCITY_Y_MIN,this.SHOT_VELOCITY_Y_MIX)* shotDirection)
-        
+            this.shotCount++;
+            this.ScoreDisplay();
         })
         // cup/ball collision
         this.physics.add.collider(this.ball,this.cup,(ball,cup)=>{
-            ball.destroy()
+            //ball.destroy()
+            this.successCount++;
+            this.reset();
+            this.ScoreDisplay();
         })
         // ball/wall collision
         this.physics.add.collider(this.ball,this.walls)
+        this.physics.add.collider(this.ball, this.oneWay);
+        this.physics.add.collider(this.ball, this.movingObstacle);
         // ball/one-way collision
     }
 
     update() {
+        if (this.movingObstacle.body.blocked.right || this.movingObstacle.body.blocked.left) {
+            this.movingObstacle.setVelocityX(-this.movingObstacle.body.velocity.x);
+        }
+    }
+    reset(){
+        this.ball.setPosition(width / 2, height - height / 10);
+        this.ball.setVelocity(0, 0);
+    }
 
+    ScoreDisplay() {
+        this.shotText.setText(`Shots: ${this.shotCount}`);
+        this.scoreText.setText(`Score: ${this.successCount}`);
+        let successRate = this.shotCount > 0 ? ((this.successCount / this.shotCount) * 100).toFixed(2) : 0;
+        this.successRateText.setText(`Shot Success Rate: ${successRate}%`);
     }
 }
 /*
